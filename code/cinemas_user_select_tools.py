@@ -137,7 +137,10 @@ def user_all_select_places(interface_cinema: InterfaceCinema, is_premier: bool =
                 cinema = None
 
         elif not is_confirm:
-            room = interface_cinema[cinema][number_room - 1].get_room_premiers(premier)
+            if is_premier:
+                room = interface_cinema[cinema][number_room - 1].get_room_premiers(premier)
+            else:
+                room = None
             places = user_set_places(room)
             if places:
                 is_confirm = True

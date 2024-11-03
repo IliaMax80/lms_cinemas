@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import json
-from typing import Tuple
+from colorama import Fore, Back
 
 DATE_FORMAT = '%d.%m.%Y %H:%M'
 
@@ -16,7 +16,7 @@ class Place:
         if self.is_lock:
             return '   '
         elif self.is_sale:
-            return '|X|'
+            return Fore.RED + '|_|' + Fore.BLACK
         else:
             return '|_|'
 
@@ -60,15 +60,12 @@ class Room:
         for row in range(len(self._place)):
             places_line: list[str, ...] = []
             for column in range(len(self._place[row])):
+                place_str = str(self._place[row][column])
+                if (column, row) in select:
+                    place_str = Fore.BLUE + place_str + Fore.BLACK
                 if column == active[0] and row == active[1]:
-                    if (column, row) in select:
-                        places_line.append(f'[S]')
-                    else:
-                        places_line.append(f'[{str(self._place[row][column])[1]}]')
-                elif (column, row) in select:
-                    places_line.append(f'|S|')
-                else:
-                    places_line.append(str(self._place[row][column]))
+                    place_str = Back.WHITE + place_str + Back.BLACK
+                places_line.append(place_str)
 
             places_lines.append(' '.join(places_line))
         return '\n'.join(places_lines)
@@ -121,7 +118,7 @@ class Room:
 
     def get_room_premiers(self, item: str) -> 'Room':
         premiers_room = Room(self._count_columns, self._count_rows, self.get_json())
-        for (column, row) in self.premiers[item][3]:
+        for (column, row) in self.premiers.get(item, ((), (), ()))[3]:
             premiers_room[(column, row)].is_sale = True
         return premiers_room
 
@@ -179,7 +176,8 @@ class InterfaceCinema:
     PATH = 'cinemas.json'
 
     def __init__(self, is_read_file: bool = True):
-        self._cinemas: [Cinema, ...] = []
+        self._cinemas: list[Cinema, ...] = []
+        self._patterns_premiers: dict[str, str] = {}
         if is_read_file:
             self._set_json()
 
@@ -206,6 +204,8 @@ class InterfaceCinema:
             cinema.set_json(json_cinema)
             self._cinemas.append(cinema)
 
+        self._patterns_premiers = data.get('premier', {})
+
         # self._cursor_place = data['cursor_place']
         # self._action_room = data['action_room']
         # self._action_places = data['action_places']
@@ -214,6 +214,7 @@ class InterfaceCinema:
         data = {'cinemas': []}
         for cinema in self._cinemas:
             data['cinemas'].append(cinema.get_json())
+        data['premier'] = self._patterns_premiers
 
         with open(self.PATH, "w") as write_file:
             json.dump(data, write_file)
@@ -227,14 +228,22 @@ class InterfaceCinema:
     def get_rooms(self, cinema: str) -> list[str, ...]:
         return self.cinemas[cinema].get_rooms()
 
+    def get_pattern_premier(self) -> list[str, ...]:
+        return list(self._patterns_premiers.keys())
+
     def add_cinema(self, name: str) -> None:
         self._cinemas.append(Cinema(name))
-        self.save()
 
     def remove_cinema(self, name: str) -> None:
         if name in self.cinemas:
             self._cinemas.remove(self.cinemas[name])
-        self.save()
+
+    def add_pattern_premier(self, name: str, info: str) -> None:
+        self._patterns_premiers[name] = info
+
+    def remove_pattern_premier(self, name: str) -> None:
+        self._patterns_premiers.pop(name)
+
 
 if __name__ == '__main__':
     interface_cinema = InterfaceCinema()
